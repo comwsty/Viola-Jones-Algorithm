@@ -1,0 +1,80 @@
+---Ex1
+from ultralytics import YOLO
+import cv2
+
+model = YOLO("yolov8n.pt")
+
+image_path = "flower.jpg"
+image = cv2.imread(image_path)
+
+orig_h, orig_w = image.shape[:2]
+
+results = model(image)
+
+for r in results:
+    boxes = r.boxes
+    for box in boxes:
+        x1, y1, x2, y2 = map(int, box.xyxy[0])  # Координаты рамки
+        conf = box.conf[0].item()  # Уверенность
+        label = model.names[int(box.cls[0])]  # Название объекта
+
+        cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), 3) 
+        cv2.putText(image, f"{label} {conf:.2f}", (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 3)
+
+screen_w = 1920  # Ширина экрана
+screen_h = 1080  # Высота экрана
+
+if orig_w > screen_w or orig_h > screen_h:
+    scale = min(screen_w / orig_w, screen_h / orig_h) * 0.95 
+    new_w, new_h = int(orig_w * scale), int(orig_h * scale)
+    resized_image = cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_CUBIC)  
+else:
+    resized_image = image
+
+cv2.namedWindow("Detection", cv2.WINDOW_NORMAL)
+cv2.imshow("Detection", resized_image)
+
+cv2.moveWindow("Detection", (screen_w - resized_image.shape[1]) // 2, (screen_h - resized_image.shape[0]) // 2)
+
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+
+---Ex2
+import cv2
+import torch
+from ultralytics import YOLO
+
+model = YOLO("yolov8n.pt")  
+
+cap = cv2.VideoCapture(0)
+
+if not cap.isOpened():
+    print("Ошибка: не удалось открыть веб-камеру!")
+    exit()
+
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        print("Ошибка: не удалось получить кадр!")
+        break
+
+    results = model(frame)
+
+    for result in results:
+        for box in result.boxes:
+            x1, y1, x2, y2 = map(int, box.xyxy[0])  
+            conf = float(box.conf[0])  # Уверенность (от 0 до 1)
+            class_id = int(box.cls[0])  # Индекс класса объекта
+            label = f"{model.names[class_id]} {conf:.2f}"  
+
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+
+    cv2.imshow("YOLO Object Detection", frame)
+
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+cap.release()
+cv2.destroyAllWindows()
+
