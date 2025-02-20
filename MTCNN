@@ -1,0 +1,79 @@
+---Ex1
+from mtcnn import MTCNN
+import cv2
+
+# Инициализация детектора
+detector = MTCNN()
+
+# Чтение изображения
+img = cv2.imread('image.jpg')
+img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+# Обнаружение лиц
+faces = detector.detect_faces(img_rgb)
+for face in faces:
+    x, y, w, h = face['box']
+    cv2.rectangle(img, (x, y), (x+w, y+h), (0, 255, 0), 2)
+
+cv2.imshow('Faces', img)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+
+---Ex2
+import cv2
+import numpy as np
+from mtcnn import MTCNN
+import time
+
+# Инициализация MTCNN
+detector = MTCNN()
+
+# Запуск веб-камеры
+cap = cv2.VideoCapture(0)
+
+# Включаем таймер для FPS
+prev_time = 0
+
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        break
+
+    # Конвертируем в RGB (MTCNN работает с RGB)
+    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+    # Обнаружение лиц
+    faces = detector.detect_faces(rgb_frame)
+
+    for face in faces:
+        x, y, w, h = face['box']
+        keypoints = face['keypoints']
+
+        # Рисуем рамку вокруг лица
+        cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+
+        # Рисуем ключевые точки
+        for key, point in keypoints.items():
+            cv2.circle(frame, point, 3, (0, 0, 255), -1)
+
+        # Отображение вероятности обнаружения лица
+        confidence = face.get('confidence', 0) * 100
+        cv2.putText(frame, f'Confidence: {confidence:.2f}%', (x, y - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+
+    # Расчет и отображение FPS
+    curr_time = time.time()
+    fps = 1 / (curr_time - prev_time)
+    prev_time = curr_time
+    cv2.putText(frame, f'FPS: {fps:.2f}', (10, 30),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+
+    # Отображение изображения
+    cv2.imshow('MTCNN Face Detection', frame)
+
+    # Выход по клавише 'q'
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+cap.release()
+cv2.destroyAllWindows()
